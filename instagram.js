@@ -33,15 +33,34 @@ module.exports = class Instagram {
     * Constructor
   */
   constructor(csrfToken, sessionId) {
-    this.csrfToken = csrfToken
-    this.sessionId = sessionId
-    this.mid = null
-    this.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_1) AppleWebKit/604.3.5 (KHTML, like Gecko) Version/11.0.1 Safari/604.3.5'
+    this.API_URL = this.API_URL;
+    this.GRAPHQL_API_URL = this.API_URL + 'graphql/query/';
+    this.USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_1) AppleWebKit/604.3.5 (KHTML, like Gecko) Version/11.0.1 Safari/604.3.5';
+    this.MOBILE_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 11_1 like Mac OS X) AppleWebKit/604.3.5 (KHTML, like Gecko) Version/11.0 Mobile/15B93 Safari/604.1';
+
+    this.csrfToken = csrfToken;
+    this.sessionId = sessionId;
+    this.mid = null;
     this.userIdFollowers = {};
-    this.timeoutForCounter = 300
-    this.timeoutForCounterValue = 30000
-    this.receivePromises = {}
-    this.searchTypes = ['location', 'hashtag']
+    this.timeoutForCounter = 300;
+    this.timeoutForCounterValue = 30000;
+    this.receivePromises = {};
+    this.searchTypes = ['location', 'hashtag'];
+
+    // These are fixed hashes
+    // @see https://github.com/ping/instagram_private_api/blob/54427574583d33544c006c9f6a13cb6bc306a714/instagram_web_api/client.py#L387
+    this.hashTable = {
+      tagFeed: 'ded47faa9a1aaded10161a2ff32abb6b',
+      timelineFeed: '485c25657308f08317c1e4b967356828',
+      locationFeed: 'ac38b90f0f3981c42092016a37c59bf7',
+      userFeed: '42323d64886122307be10013ad2dcc44',
+      reelsFeed: '297c491471fff978fa2ab83c0673a618',
+      reelsTray: '60b755363b5c230111347a7a4e242001',
+      mediaComments: '33ba35852cb50da46f5b5e889df7d159',
+      userFollowers: '37479f2b8209594dde7facb0d904896a',
+      userFollowing: '58712303d941c6855d4e888c5f0cd22f',
+    }
+
 
     this.essentialValues = {
       sessionid   : undefined,
@@ -82,16 +101,16 @@ module.exports = class Instagram {
         'accept-langauge': 'en-US;q=0.9,en;q=0.8,es;q=0.7',
         'cookie': cookie,
 
-        'origin': 'https://www.instagram.com',
+        'origin': this.API_URL,
 
-        'referer': 'https://www.instagram.com/',
+        'referer': this.API_URL,
         'upgrade-insecure-requests': '1',
 
-        'user-agent': this.userAgent,
+        'user-agent': this.USER_AGENT,
       }
     }
 
-    return fetch('https://www.instagram.com/' + username, fetch_data)
+    return fetch(this.API_URL + username, fetch_data)
       .then(res => res.text()
         .then(function (data) {
           const regex = /window\._sharedData = (.*);<\/script>/;
@@ -159,13 +178,13 @@ module.exports = class Instagram {
     form.append('q', postBody)
 
     self.receivePromises[userId] = 1
-    return fetch('https://www.instagram.com/query/',
+    return fetch(this.API_URL,
       {
         'method': 'post',
         'body': form,
         'headers':
         {
-          'referer': 'https://www.instagram.com/',
+          'referer': this.API_URL,
           'origin': 'https://www.instagram.com',
           'user-agent': self.userAgent,
           'x-instagram-ajax': '1',
@@ -236,10 +255,10 @@ module.exports = class Instagram {
 
           'origin': 'https://www.instagram.com',
 
-          'referer': 'https://www.instagram.com/',
+          'referer': this.API_URL,
           'upgrade-insecure-requests': 1,
 
-          'user-agent': this.userAgent,
+          'user-agent': this.USER_AGENT,
 
           'cookie': 'ig_cb=1'
         }
@@ -307,17 +326,17 @@ module.exports = class Instagram {
         // 'cookie'                        : `rur=ATN; mid=${this.mid}; csrftoken=${this.csrfToken}; mcd=${this.mcd}`,
         'dnt'                           : 1,
         'cookie'                        : 'ig_cb=' + this.essentialValues.ig_cb,
-        'origin'                        : 'https://www.instagram.com',
-        'referer'                       : 'https://www.instagram.com/accounts/login',
+        'origin'                        : this.API_URL,
+        'referer'                       : this.API_URL + 'accounts/login',
         'upgrade-insecure-requests'     : 1,
-        'user-agent'                    : this.userAgent,
+        'user-agent'                    : this.USER_AGENT,
         'x-csrftoken'                   : this.csrfToken,
         'x-instagram-ajax'              : this.rollout_hash,
         'x-requested-with'              : 'XMLHttpRequest',
       }
     }
 
-    return fetch('https://www.instagram.com/accounts/login/ajax', options)
+    return fetch(this.API_URL + 'accounts/login/ajax', options)
       .then((t) => {
         let cookies = t.headers._headers['set-cookie'];
         console.log(JSON.stringify(cookies, null, 2));
@@ -364,13 +383,13 @@ module.exports = class Instagram {
     form.append('email', email)
     form.append('seamless_login_enabled', "1")
 
-    return fetch('https://www.instagram.com/accounts/web_create_ajax/', {
+    return fetch(this.API_URL + 'accounts/web_create_ajax/', {
       'method': 'post',
       'body': form,
       'headers': {
-        'referer': 'https://www.instagram.com/',
+        'referer': this.API_URL,
         'origin': 'https://www.instagram.com',
-        'user-agent': this.userAgent,
+        'user-agent': this.USER_AGENT,
         'x-instagram-ajax': '1',
         'x-requested-with': 'XMLHttpRequest',
         'x-csrftoken': this.csrfToken,
@@ -398,9 +417,9 @@ module.exports = class Instagram {
   follow(userId, isUnfollow) {
     const headers =
     {
-      'referer': 'https://www.instagram.com/',
-      'origin': 'https://www.instagram.com',
-      'user-agent': this.userAgent,
+      'referer': this.API_URL,
+      'origin': this.API_URL,
+      'user-agent': this.USER_AGENT,
       'x-instagram-ajax': '1',
       'content-type': 'application/json',
       'x-requested-with': 'XMLHttpRequest',
@@ -408,7 +427,7 @@ module.exports = class Instagram {
       cookie: ' sessionid=' + this.sessionId + '; csrftoken=' + this.csrfToken + '; mid=' + this.mid + '; rur=ASH; mid=' + this.mid + ';'
     }
 
-    return fetch('https://www.instagram.com/web/friendships/' + userId + (isUnfollow == 1 ? '/unfollow' : '/follow'),
+    return fetch(this.API_URL + 'web/friendships/' + userId + (isUnfollow == 1 ? '/unfollow' : '/follow'),
       {
         'method': 'post',
         'headers': this.getHeaders()//headers
@@ -422,9 +441,9 @@ module.exports = class Instagram {
    */
   getHeaders() {
     return {
-      'referer': 'https://www.instagram.com/p/' + this.mid + '/?taken-by=' + this.username,
-      'origin': 'https://www.instagram.com',
-      'user-agent': this.userAgent,
+      'referer': this.API_URL + 'p/' + this.mid + '/?taken-by=' + this.username,
+      'origin': this.API_URL,
+      'user-agent': this.USER_AGENT,
       'x-instagram-ajax': '1',
       'x-requested-with': 'XMLHttpRequest',
       'x-csrftoken': this.csrfToken,
@@ -443,7 +462,7 @@ module.exports = class Instagram {
     let form = new formData();
     form.append('q', query)
 
-    return fetch('https://www.instagram.com/query/',
+    return fetch(this.API_URL,
       {
         'method': 'post',
         'body': form,
@@ -468,27 +487,28 @@ module.exports = class Instagram {
     items = items ? items : 10;
 
     // Make an initial request to get the rhx_gis string
-    const initResponse = await superagent.get('https://www.instagram.com/')
-                                         .set('User-Agent', this.userAgent);
+    const initResponse = await superagent.get(this.API_URL)
+                                         .set('User-Agent', this.USER_AGENT);
     this.rhxGis = (RegExp('"rhx_gis":"([a-f0-9]{32})"', 'g')).exec(initResponse.text)[1];
     console.log(`Generated the rhxGis: ${this.rhxGis}`);
     this.csrfTokenCookie = getCookieValueFromKey('csrftoken', initResponse.header['set-cookie']);
     console.log(`Generated the token cookie: ${JSON.stringify(this.csrfTokenCookie, null, 2)}`);
 
     const queryVariables = JSON.stringify({
-        id: id || "123456789",
+        id: id,
         first: items
     });
 
     const signature = generateRequestSignature(this.rhxGis, this.csrfTokenCookie, queryVariables);
+    console.log(`Generated the request signature: ${JSON.stringify(signature, null, 2)}`);
 
-    const res = await superagent.get('https://www.instagram.com/graphql/query/')
+    const res = await superagent.get(this.GRAPHQL_API_URL)
         .query({
-            query_hash: '42323d64886122307be10013ad2dcc44',
+            query_hash: this.hashTable.userFeed,
             variables: queryVariables
         })
         .set({
-            'User-Agent': this.userAgent,
+            'User-Agent': this.USER_AGENT,
             'X-Instagram-GIS': signature,
             'Cookie': `rur=FRC;csrftoken=${this.csrfTokenCookie};ig_pr=1`
         });
@@ -513,7 +533,7 @@ module.exports = class Instagram {
     * @return {Object} Promse
   */
   like(postId) {
-    return fetch('https://www.instagram.com/web/likes/' + postId + '/like/',
+    return fetch(this.API_URL + 'web/likes/' + postId + '/like/',
       {
         'method': 'POST',
         'headers': this.getHeaders()
@@ -529,7 +549,7 @@ module.exports = class Instagram {
     * @return {Object} Promse
   */
   unlike(postId) {
-    return fetch('https://www.instagram.com/web/likes/' + postId + '/unlike/',
+    return fetch(this.API_URL + 'web/likes/' + postId + '/unlike/',
       {
         'method': 'POST',
         'headers': this.getHeaders()
@@ -604,7 +624,7 @@ module.exports = class Instagram {
     form.append('ref', 'users::show')
     form.append('query_id', '17849115430193904') // this is static id. May be changed after rebuild, but now actually
 
-    return fetch('https://www.instagram.com/query/',
+    return fetch(this.API_URL,
       {
         headers: this.getHeaders(),
         method: 'post',
@@ -627,7 +647,7 @@ module.exports = class Instagram {
 
     //exclusion for hashtag if not cursor
     if (searchBy == 'hashtag' && !cursor) {
-      return fetch('https://www.instagram.com/explore/tags/' + q + '/',
+      return fetch(this.API_URL + 'explore/tags/' + q + '/',
         {
           headers: this.getHeaders(),
         }).then(t => t.text().then(r => JSON.parse(r.match(/\<script type=\"text\/javascript\">window\._sharedData \=(.*)\;<\//)[1])))
@@ -670,7 +690,7 @@ module.exports = class Instagram {
     form.append('query_id', '') //empty
 
 
-    return fetch('https://www.instagram.com/query/',
+    return fetch(this.API_URL,
       {
         headers: this.getHeaders(),
         method: 'post',
@@ -686,7 +706,7 @@ module.exports = class Instagram {
   */
   commonSearch(q, rankToken) {
     rankToken = rankToken ? rankToken : ''
-    return fetch('https://www.instagram.com/web/search/topsearch/?context=blended&query=' + q + '&rank_token=' + rankToken,
+    return fetch(this.API_URL + 'web/search/topsearch/?context=blended&query=' + q + '&rank_token=' + rankToken,
       {
         headers: this.getHeaders() // no required
       }).then(t => t.json().then(r => r))
