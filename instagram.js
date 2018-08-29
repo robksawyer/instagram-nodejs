@@ -281,7 +281,7 @@ module.exports = class Instagram {
       'accept-language'               : 'en-US,en;q=0.9,es-US;q=0.8,es;q=0.7,ko-KR;q=0.6,ko;q=0.5,zh-HK;q=0.4,zh-CN;q=0.3,zh;q=0.2',
       'content-length'                : formdata.length,
       'content-type'                  : 'application/x-www-form-urlencoded',
-      'cookie'                        : `rur=ATN; mid=${this.mid}; csrftoken=${this.csrfToken}; mcd=3`,
+      'cookie'                        : `rur=ATN; mid=${this.mid}; csrftoken=${this.csrfToken}; mcd=${this.mcd}`,
       'dnt'                           : 1,
       // 'cookie'                     : 'ig_cb=' + this.essentialValues.ig_cb,
       'origin'                        : 'https://www.instagram.com',
