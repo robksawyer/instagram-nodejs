@@ -217,7 +217,7 @@ module.exports = class Instagram {
           'origin': 'https://www.instagram.com',
 
           'referer': 'https://www.instagram.com/',
-          'upgrade-insecure-requests': '1',
+          'upgrade-insecure-requests': 1,
 
           'user-agent': this.userAgent,
 
@@ -252,6 +252,8 @@ module.exports = class Instagram {
         var json = JSON.parse(subStr);
 
         this.rollout_hash = json.rollout_hash;
+        console.log(`json.config`);
+        console.log(JSON.stringify(json.config, null, 2));
 
         return json.config.csrf_token;
       }).catch(() =>
@@ -283,11 +285,11 @@ module.exports = class Instagram {
       'accept-language'               : 'en-US,en;q=0.9,es-US;q=0.8,es;q=0.7,ko-KR;q=0.6,ko;q=0.5,zh-HK;q=0.4,zh-CN;q=0.3,zh;q=0.2',
       'content-length'                : formdata.length,
       'content-type'                  : 'application/x-www-form-urlencoded',
-      'cookie'                        : `rur=ATN; mid=${this.mid}; csrftoken=${this.csrfToken}; mcd=${this.mcd}`,
+      // 'cookie'                        : `rur=ATN; mid=${this.mid}; csrftoken=${this.csrfToken}; mcd=${this.mcd}`,
       'dnt'                           : 1,
-      // 'cookie'                     : 'ig_cb=' + this.essentialValues.ig_cb,
+      'cookie'                        : 'ig_cb=' + this.essentialValues.ig_cb,
       'origin'                        : 'https://www.instagram.com',
-      'referer'                       : 'https://www.instagram.com/accounts/login/?force_classic_login',
+      'referer'                       : 'https://www.instagram.com/accounts/login',
       'upgrade-insecure-requests'     : 1,
       'user-agent'                    : this.userAgent,
       'x-csrftoken'                   : this.csrfToken,
@@ -297,7 +299,7 @@ module.exports = class Instagram {
     }
   }
 
-  return fetch('https://www.instagram.com/accounts/login/?force_classic_login', options)
+  return fetch('https://www.instagram.com/accounts/login', options)
     .then((t) => {
       let cookies = t.headers._headers['set-cookie'];
       console.log(JSON.stringify(cookies, null, 2));
