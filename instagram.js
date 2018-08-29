@@ -244,60 +244,68 @@ module.exports = class Instagram {
   * Get csrf token
   * @return {Object} Promise
   */
-  getCsrfToken() {
-    return fetch('https://www.instagram.com',
-      {
-        'method': 'get',
-        'headers':
-        {
-          'accept': 'text/html,application/xhtml+xml,application/xml;q0.9,image/webp,image/apng,*.*;q=0.8',
-          'accept-langauge': 'en-US;q=0.9,en;q=0.8,es;q=0.7',
-
-          'origin': 'https://www.instagram.com',
-
-          'referer': this.API_URL,
-          'upgrade-insecure-requests': 1,
-
-          'user-agent': this.USER_AGENT,
-
-          'cookie': 'ig_cb=1'
-        }
-      }).then( t => {
-        let cookies = t.headers._headers['set-cookie']
-
-        var keys = Object.keys(this.essentialValues)
-
-        for (var i = 0; i < keys.length; i++){
-          var key = keys[i];
-          if (!this.essentialValues[key])
-            for (let c in cookies)
-              if (cookies[c].includes(key) && !cookies[c].includes(key + '=""')){
-                var cookieValue = cookies[c].split(';')[0].replace(key + '=', '')
-                this.essentialValues[key] = cookieValue
-                break;
-              }
-        }
-
-        return t.text();
-      }).then( html => {
-        var subStr = html;
-
-        var startStr = '<script type="text/javascript">window._sharedData = ';
-        var start = subStr.indexOf(startStr) + startStr.length;
-        subStr = subStr.substr(start, subStr.length);
-
-        subStr = subStr.substr(0, subStr.indexOf('</script>') - 1);
-
-        var json = JSON.parse(subStr);
-
-        this.rollout_hash = json.rollout_hash;
-        console.log(`json.config`);
-        console.log(JSON.stringify(json.config, null, 2));
-
-        return json.config.csrf_token;
-      }).catch(() =>
-        console.log('Failed to get instagram csrf token')
-      )
+  async getCsrfToken() {
+    // Make an initial request to get the rhx_gis string
+    const initResponse = await superagent.get(this.API_URL)
+                                         .set('User-Agent', this.USER_AGENT);
+    this.rhxGis = (RegExp('"rhx_gis":"([a-f0-9]{32})"', 'g')).exec(initResponse.text)[1];
+    console.log(`Generated the rhxGis: ${this.rhxGis}`);
+    this.csrfToken = getCookieValueFromKey('csrftoken', initResponse.header['set-cookie']);
+    console.log(`Generated the token cookie: ${JSON.stringify(this.csrfToken, null, 2)}`);
+    return this.csrfToken;
+    // return fetch(this.API_URL,
+    //   {
+    //     'method': 'get',
+    //     'headers':
+    //     {
+    //       'accept': 'text/html,application/xhtml+xml,application/xml;q0.9,image/webp,image/apng,*.*;q=0.8',
+    //       'accept-langauge': 'en-US;q=0.9,en;q=0.8,es;q=0.7',
+    //
+    //       'origin': this.API_URL,
+    //
+    //       'referer': this.API_URL,
+    //       'upgrade-insecure-requests': 1,
+    //
+    //       'user-agent': this.USER_AGENT,
+    //
+    //       'cookie': 'ig_cb=1'
+    //     }
+    //   }).then( t => {
+    //     let cookies = t.headers._headers['set-cookie']
+    //
+    //     var keys = Object.keys(this.essentialValues)
+    //
+    //     for (var i = 0; i < keys.length; i++){
+    //       var key = keys[i];
+    //       if (!this.essentialValues[key])
+    //         for (let c in cookies)
+    //           if (cookies[c].includes(key) && !cookies[c].includes(key + '=""')){
+    //             var cookieValue = cookies[c].split(';')[0].replace(key + '=', '')
+    //             this.essentialValues[key] = cookieValue
+    //             break;
+    //           }
+    //     }
+    //
+    //     return t.text();
+    //   }).then( html => {
+    //     var subStr = html;
+    //
+    //     var startStr = '<script type="text/javascript">window._sharedData = ';
+    //     var start = subStr.indexOf(startStr) + startStr.length;
+    //     subStr = subStr.substr(start, subStr.length);
+    //
+    //     subStr = subStr.substr(0, subStr.indexOf('</script>') - 1);
+    //
+    //     var json = JSON.parse(subStr);
+    //
+    //     this.rollout_hash = json.rollout_hash;
+    //     console.log(`json.config`);
+    //     console.log(JSON.stringify(json.config, null, 2));
+    //
+    //     return json.config.csrf_token;
+    //   }).catch(() =>
+    //     console.log('Failed to get instagram csrf token')
+    //   )
   }
 
  /**
@@ -486,20 +494,12 @@ module.exports = class Instagram {
   async getFeed(id, items) {
     items = items ? items : 10;
 
-    // Make an initial request to get the rhx_gis string
-    const initResponse = await superagent.get(this.API_URL)
-                                         .set('User-Agent', this.USER_AGENT);
-    this.rhxGis = (RegExp('"rhx_gis":"([a-f0-9]{32})"', 'g')).exec(initResponse.text)[1];
-    console.log(`Generated the rhxGis: ${this.rhxGis}`);
-    this.csrfTokenCookie = getCookieValueFromKey('csrftoken', initResponse.header['set-cookie']);
-    console.log(`Generated the token cookie: ${JSON.stringify(this.csrfTokenCookie, null, 2)}`);
-
     const queryVariables = JSON.stringify({
         id: id,
         first: items
     });
 
-    const signature = generateRequestSignature(this.rhxGis, this.csrfTokenCookie, queryVariables);
+    const signature = generateRequestSignature(this.rhxGis, this.csrfToken, queryVariables);
     console.log(`Generated the request signature: ${JSON.stringify(signature, null, 2)}`);
 
     const res = await superagent.get(this.GRAPHQL_API_URL)
@@ -510,7 +510,7 @@ module.exports = class Instagram {
         .set({
             'User-Agent': this.USER_AGENT,
             'X-Instagram-GIS': signature,
-            'Cookie': `rur=FRC;csrftoken=${this.csrfTokenCookie};ig_pr=1`
+            'Cookie': `rur=FRC;csrftoken=${this.csrfToken};ig_pr=1`
         });
     return res;
   }
