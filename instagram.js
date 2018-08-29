@@ -266,7 +266,9 @@ module.exports = class Instagram {
     * @return {Object} Promise
   */
  auth(username, password) {
-  var formdata = 'username=' + username + '&password=' + password + '&queryParams=%7B%7D' + '&csrfmiddlewaretoken=' + this.csrfToken;
+  var formdata = 'username=' + username + '&password=' + password;
+  // formdata += '&queryParams=%7B%7D';
+  formdata += '&csrfmiddlewaretoken=' + this.csrfToken;
 
   var options = {
     method  : 'POST',
