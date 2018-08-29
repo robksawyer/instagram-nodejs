@@ -54,14 +54,6 @@ module.exports = class Instagram {
       ig_cb       : undefined,
       //urlgen      : undefined //this needs to be filled in according to my RE
     };
-
-    // Make an initial request to get the rhx_gis string
-    const initResponse = await superagent.get('https://www.instagram.com/')
-                                         .set('User-Agent', this.userAgent);
-    this.rhxGis = (RegExp('"rhx_gis":"([a-f0-9]{32})"', 'g')).exec(initResponse.text)[1];
-    console.log(`Generated the rhxGis: ${this.rhxGis}`);
-    this.csrfTokenCookie = getCookieValueFromKey('csrftoken', initResponse.header['set-cookie']);
-    console.log(`Generated the token cookie: ${JSON.stringify(this.csrfTokenCookie, null, 2)}`);
   }
 
   /**
@@ -471,8 +463,16 @@ module.exports = class Instagram {
     * @param {Int} items (default - 10)
     * @return {Object} Promise
   */
-  getFeed(id, items) {
+  async getFeed(id, items) {
     items = items ? items : 10;
+
+    // Make an initial request to get the rhx_gis string
+    const initResponse = await superagent.get('https://www.instagram.com/')
+                                         .set('User-Agent', this.userAgent);
+    this.rhxGis = (RegExp('"rhx_gis":"([a-f0-9]{32})"', 'g')).exec(initResponse.text)[1];
+    console.log(`Generated the rhxGis: ${this.rhxGis}`);
+    this.csrfTokenCookie = getCookieValueFromKey('csrftoken', initResponse.header['set-cookie']);
+    console.log(`Generated the token cookie: ${JSON.stringify(this.csrfTokenCookie, null, 2)}`);
 
     const queryVariables = JSON.stringify({
         id: id || "123456789",
