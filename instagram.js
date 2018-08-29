@@ -56,7 +56,8 @@ module.exports = class Instagram {
     };
 
     // Make an initial request to get the rhx_gis string
-    const initResponse = await superagent.get('https://www.instagram.com/');
+    const initResponse = await superagent.get('https://www.instagram.com/')
+                                         .set('User-Agent', this.userAgent);
     this.rhxGis = (RegExp('"rhx_gis":"([a-f0-9]{32})"', 'g')).exec(initResponse.text)[1];
     console.log(`Generated the rhxGis: ${this.rhxGis}`);
     this.csrfTokenCookie = getCookieValueFromKey('csrftoken', initResponse.header['set-cookie']);
