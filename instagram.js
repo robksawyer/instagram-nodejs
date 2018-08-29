@@ -307,10 +307,10 @@ module.exports = class Instagram {
       }
 
       return this.essentialsValues.sessionId;
-    }).catch((err) =>
-      console.error(err);
+    }).catch((err) => {
+      console.log(err);
       console.log('Instagram authentication failed (challenge required error).');
-    )
+    })
 }
 
   /**
