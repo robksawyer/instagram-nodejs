@@ -490,7 +490,7 @@ module.exports = class Instagram {
             'User-Agent': this.userAgent,
             'X-Instagram-GIS': signature,
             'Cookie': `rur=FRC;csrftoken=${this.csrfTokenCookie};ig_pr=1`
-        }));
+        });
     return res;
   }
 
