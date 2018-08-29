@@ -299,7 +299,7 @@ module.exports = class Instagram {
     }
   }
 
-  return fetch('https://www.instagram.com/accounts/login', options)
+  return fetch('https://www.instagram.com/accounts/login/ajax', options)
     .then((t) => {
       let cookies = t.headers._headers['set-cookie'];
       console.log(JSON.stringify(cookies, null, 2));
@@ -387,7 +387,7 @@ module.exports = class Instagram {
       'content-type': 'application/json',
       'x-requested-with': 'XMLHttpRequest',
       'x-csrftoken': undefined,
-      cookie: ' sessionid=' + this.sessionId + '; csrftoken=' + this.csrfToken + '; mid=WPL0LQAEAAGG3XL5-xHXzClnpqA3; rur=ASH; mid=WRN1_AAEAAE07QksztCl3OCnLj8Y;'
+      cookie: ' sessionid=' + this.sessionId + '; csrftoken=' + this.csrfToken + '; mid=' + this.mid + '; rur=ASH; mid=' + this.mid + ';'
     }
 
     return fetch('https://www.instagram.com/web/friendships/' + userId + (isUnfollow == 1 ? '/unfollow' : '/follow'),
@@ -404,7 +404,7 @@ module.exports = class Instagram {
    */
   getHeaders() {
     return {
-      'referer': 'https://www.instagram.com/p/BT1ynUvhvaR/?taken-by=yatsenkolesh',
+      'referer': 'https://www.instagram.com/p/' + this.mid + '/?taken-by=' + this.username,
       'origin': 'https://www.instagram.com',
       'user-agent': this.userAgent,
       'x-instagram-ajax': '1',
