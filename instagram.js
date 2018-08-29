@@ -15,6 +15,7 @@ module.exports = class Instagram {
   constructor(csrfToken, sessionId) {
     this.csrfToken = csrfToken
     this.sessionId = sessionId
+    this.mid = null
     this.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36'
     this.userIdFollowers = {};
     this.timeoutForCounter = 300
@@ -265,27 +266,31 @@ module.exports = class Instagram {
     * @return {Object} Promise
   */
  auth(username, password) {
-  var formdata = 'username=' + username + '&password=' + password + '&queryParams=%7B%7D'
+  var formdata = 'username=' + username + '&password=' + password + '&queryParams=%7B%7D';
 
   var options = {
     method  : 'POST',
     body    : formdata,
     headers :
     {
-      'accept'            : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'cache-control'     : 'max-age=0',
-      'connection'        : 'keep-alive',
-      'accept-encoding'   : 'deflate, br',
-      'accept-language'   : 'en-US,en;q=0.5',
-      'content-length'    : formdata.length,
-      'content-type'      : 'application/x-www-form-urlencoded',
-      'cookie'            : 'ig_cb=' + this.essentialValues.ig_cb,
-      'origin'            : 'https://www.instagram.com',
-      'referer'           : 'https://www.instagram.com/',
-      'user-agent'        : this.userAgent,
-      'x-csrftoken'       : this.csrfToken,
-      'x-instagram-ajax'  : this.rollout_hash,
-      'x-requested-with'  : 'XMLHttpRequest',
+      'accept'                        : 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+      'scheme'                        : 'https',
+      'cache-control'                 : 'max-age=0',
+      'connection'                    : 'keep-alive',
+      'accept-encoding'               : 'gzip, deflate, br',
+      'accept-language'               : 'en-US,en;q=0.9,es-US;q=0.8,es;q=0.7,ko-KR;q=0.6,ko;q=0.5,zh-HK;q=0.4,zh-CN;q=0.3,zh;q=0.2',
+      'content-length'                : formdata.length,
+      'content-type'                  : 'application/x-www-form-urlencoded',
+      'cookie'                        : `rur=ATN; mid=${this.mid}; csrftoken=${this.csrfToken}; mcd=3`,
+      'dnt'                           : 1,
+      // 'cookie'                     : 'ig_cb=' + this.essentialValues.ig_cb,
+      'origin'                        : 'https://www.instagram.com',
+      'referer'                       : 'https://www.instagram.com/accounts/login/?force_classic_login',
+      'upgrade-insecure-requests'     : 1,
+      'user-agent'                    : this.userAgent,
+      'x-csrftoken'                   : this.csrfToken,
+      'x-instagram-ajax'              : this.rollout_hash,
+      'x-requested-with'              : 'XMLHttpRequest',
 
     }
   }
