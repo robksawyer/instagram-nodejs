@@ -279,7 +279,7 @@ module.exports = class Instagram {
       'accept-language'   : 'en-US,en;q=0.5',
       'content-length'    : formdata.length,
       'content-type'      : 'application/x-www-form-urlencoded',
-      'cookie'            : 'ig_cb=' + username + '.txt',
+      'cookie'            : 'ig_cb=' + this.essentialValues.ig_cb,
       'origin'            : 'https://www.instagram.com',
       'referer'           : 'https://www.instagram.com/',
       'user-agent'        : this.userAgent,
@@ -292,8 +292,8 @@ module.exports = class Instagram {
 
   return fetch('https://www.instagram.com/accounts/login/?force_classic_login', options)
     .then((t) => {
-      let cookies = t.headers._headers['set-cookie']
-
+      let cookies = t.headers._headers['set-cookie'];
+      console.log(JSON.stringify(cookies, null, 2));
       var keys = Object.keys(this.essentialValues)
 
       console.log('Found the following keys.');
