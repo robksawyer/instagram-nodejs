@@ -31,67 +31,9 @@ module.exports = class Instagram {
       mid         : undefined,
       shbts       : undefined,
       mcd         : undefined,
-      ig_cb       : 1,
+      ig_cb       : undefined,
       //urlgen      : undefined //this needs to be filled in according to my RE
     };
-
-    this.baseHeader = {
-      'accept-langauge': 'en-US;q=0.9,en;q=0.8,es;q=0.7',
-      'origin': 'https://www.instagram.com',
-      'referer': 'https://www.instagram.com/',
-      'upgrade-insecure-requests': '1',
-      'user-agent': this.userAgent,    
-    }
-  }
-
-  
-  generateCookie(simple){
-    if (simple) return 'ig_cb=1'
-
-    var cookie = ''
-    var keys = Object.keys(this.essentialValues)
-    for (var i = 0; i < keys.length; i++){
-      var key = keys[i];
-      cookie += key + '=' + this.essentialValues[key] + (i < keys.length - 1 ? '; ' : '')
-    }
-
-    return cookie;
-  }
-
-  combineWithBaseHeader(data){
-    return Object.assign(this.baseHeader, data)
-  }
-
-  updateEssentialValues(src, isHTML){
-    //assumes that essential values will be extracted from a cookie unless specified by the isHTML bool
-
-    if (!isHTML){
-      var keys = Object.keys(this.essentialValues)
-
-        for (var i = 0; i < keys.length; i++){
-          var key = keys[i];
-          if (!this.essentialValues[key])
-            for (let cookie in src)
-              if (src[cookie].includes(key) && !src[cookie].includes(key + '=""')){
-                var cookieValue = src[cookie].split(';')[0].replace(key + '=', '')
-                this.essentialValues[key] = cookieValue
-                break;
-              }
-        }
-      } else {
-        var subStr = src;
-
-        var startStr = '<script type="text/javascript">window._sharedData = ';
-        var start = subStr.indexOf(startStr) + startStr.length;
-        subStr = subStr.substr(start, subStr.length);
-        
-        subStr = subStr.substr(0, subStr.indexOf('</script>') - 1);
-
-        var json = JSON.parse(subStr);
-
-        this.essentialValues.csrftoken = json.config.csrf_token;
-        this.rollout_hash = json.rollout_hash;
-      }
   }
 
   /**
@@ -100,29 +42,45 @@ module.exports = class Instagram {
     * @return {Object} Promise
   */
   getUserDataByUsername(username) {
-    
+
+    var cookie = ''
+
+    var keys = Object.keys(this.essentialValues)
+    for (var i = 0; i < keys.length; i++){
+      var key = keys[i];
+      cookie += key + '=' + this.essentialValues[key] + (i < keys.length - 1 ? '; ' : '')
+    }
+
+
     var fetch_data = {
       'method': 'get',
       'headers':
-        this.combineWithBaseHeader(
-          {
-            'accept': 'text/html,application/xhtml+xml,application/xml;q0.9,image/webp,image/apng,*.*;q=0.8',
-            'accept-encoding': 'gzip, deflate, br',
-            'cookie': this.generateCookie()
-          }
-        )
-    }
-    
-    return fetch('https://www.instagram.com/' + username, fetch_data).then(res => res.text().then(function (data) {
-      console.log(data)
-    
-      const regex = /window\._sharedData = (.*);<\/script>/;
-      const match = regex.exec(data);
-      if (typeof match[1] === 'undefined') {
-        return '';
+      {
+        'accept': 'text/html,application/xhtml+xml,application/xml;q0.9,image/webp,image/apng,*.*;q=0.8',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-langauge': 'en-US;q=0.9,en;q=0.8,es;q=0.7',
+        'cookie': cookie,
+
+        'origin': 'https://www.instagram.com',
+
+        'referer': 'https://www.instagram.com/',
+        'upgrade-insecure-requests': '1',
+
+        'user-agent': this.userAgent,
       }
-      return JSON.parse(match[1]).entry_data.ProfilePage[0];
-    }))
+    }
+
+    return fetch('https://www.instagram.com/' + username, fetch_data)
+      .then(res => res.text()
+        .then(function (data) {
+          const regex = /window\._sharedData = (.*);<\/script>/;
+          const match = regex.exec(data);
+          if (typeof match[1] === 'undefined') {
+            return '';
+          }
+          return JSON.parse(match[1]).entry_data.ProfilePage[0];
+        })
+      );
   }
 
   /**
@@ -185,13 +143,15 @@ module.exports = class Instagram {
         'method': 'post',
         'body': form,
         'headers':
-          this.combineWithBaseHeader(
-            {
-              'accept': 'text/html,application/xhtml+xml,application/xml;q0.9,image/webp,image/apng,*.*;q=0.8',
-              'accept-encoding': 'gzip, deflate, br',
-              'cookie': this.generateCookie()
-            }
-          )
+        {
+          'referer': 'https://www.instagram.com/',
+          'origin': 'https://www.instagram.com',
+          'user-agent': self.userAgent,
+          'x-instagram-ajax': '1',
+          'x-requested-with': 'XMLHttpRequest',
+          'x-csrftoken': self.csrfToken,
+          cookie: ' sessionid=' + self.sessionId + '; csrftoken=' + self.csrfToken
+        }
       }).then(res => {
         return res.text().then(function (response) {
           //prepare convert to json
@@ -249,19 +209,50 @@ module.exports = class Instagram {
       {
         'method': 'get',
         'headers':
-          this.combineWithBaseHeader(
-            {
-              'accept': 'text/html,application/xhtml+xml,application/xml;q0.9,image/webp,image/apng,*.*;q=0.8',
-              'accept-encoding': 'gzip, deflate, br',
-              'cookie': this.generateCookie(true)
-            }
-          )
+        {
+          'accept': 'text/html,application/xhtml+xml,application/xml;q0.9,image/webp,image/apng,*.*;q=0.8',
+          'accept-langauge': 'en-US;q=0.9,en;q=0.8,es;q=0.7',
+
+          'origin': 'https://www.instagram.com',
+
+          'referer': 'https://www.instagram.com/',
+          'upgrade-insecure-requests': '1',
+
+          'user-agent': this.userAgent,
+
+          'cookie': 'ig_cb=1'
+        }
       }).then( t => {
-        this.updateEssentialValues(t.headers._headers['set-cookie'])
-        return t.text()
+        let cookies = t.headers._headers['set-cookie']
+
+        var keys = Object.keys(this.essentialValues)
+
+        for (var i = 0; i < keys.length; i++){
+          var key = keys[i];
+          if (!this.essentialValues[key])
+            for (let c in cookies)
+              if (cookies[c].includes(key) && !cookies[c].includes(key + '=""')){
+                var cookieValue = cookies[c].split(';')[0].replace(key + '=', '')
+                this.essentialValues[key] = cookieValue
+                break;
+              }
+        }
+
+        return t.text();
       }).then( html => {
-        this.updateEssentialValues(html, true)
-        return this.essentialValues.csrftoken
+        var subStr = html;
+
+        var startStr = '<script type="text/javascript">window._sharedData = ';
+        var start = subStr.indexOf(startStr) + startStr.length;
+        subStr = subStr.substr(start, subStr.length);
+
+        subStr = subStr.substr(0, subStr.indexOf('</script>') - 1);
+
+        var json = JSON.parse(subStr);
+
+        this.rollout_hash = json.rollout_hash;
+
+        return json.config.csrf_token;
       }).catch(() =>
         console.log('Failed to get instagram csrf token')
       )
@@ -279,27 +270,46 @@ module.exports = class Instagram {
   var options = {
     method  : 'POST',
     body    : formdata,
-    headers : 
-      this.combineWithBaseHeader(
-        {
-          'accept'            : '*/*',
-          'accept-encoding'   : 'gzip, deflate, br',
-          'content-length'    : formdata.length,
-          'content-type'      : 'application/x-www-form-urlencoded',
-          'cookie'            : 'ig_cb=' + this.essentialValues.ig_cb,
-          'x-csrftoken'       : this.csrfToken,
-          'x-instagram-ajax'  : this.rollout_hash,
-          'x-requested-with'  : 'XMLHttpRequest',
-        }
-      )
+    headers :
+    {
+      'accept'            : '*/*',
+      'accept-encoding'   : 'gzip, deflate, br',
+      'accept-language'   : 'sv,en-US;q=0.9,en;q=0.8,es;q=0.7',
+      'content-length'    : formdata.length,
+      'content-type'      : 'application/x-www-form-urlencoded',
+      'cookie'            : 'ig_cb=' + this.essentialValues.ig_cb,
+      'origin'            : 'https://www.instagram.com',
+      'referer'           : 'https://www.instagram.com/',
+      'user-agent'        : this.userAgent,
+      'x-csrftoken'       : this.csrfToken,
+      'x-instagram-ajax'  : this.rollout_hash,
+      'x-requested-with'  : 'XMLHttpRequest',
+
+    }
   }
 
-  return fetch('https://www.instagram.com/accounts/login/ajax/', options).then(
-    t => {
-      this.updateEssentialValues(t.headers._headers['set-cookie'])
+  return fetch('https://www.instagram.com/accounts/login/', options).then(
+  t => {
+      let cookies = t.headers._headers['set-cookie']
+
+      var keys = Object.keys(this.essentialValues)
+
+      for (var i = 0; i < keys.length; i++){
+        var key = keys[i];
+        if (!this.essentialValues[key])
+          for (let c in cookies) {
+            if (cookies[c].includes(key) && !cookies[c].includes(key + '=""')){
+              var cookieValue = cookies[c].split(';')[0].replace(key + '=', '')
+              this.essentialValues[key] = cookieValue
+              break;
+            }
+          }
+      }
+
       return this.essentialsValues.sessionId;
-    }).catch(() =>
-      console.log('Instagram authentication failed (challenge required erro)')
+    }).catch((err) =>
+      console.error(err);
+      console.log('Instagram authentication failed (challenge required error).');
     )
 }
 
