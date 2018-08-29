@@ -5,8 +5,27 @@
 
 "use-strict";
 
+const superagent = require('superagent');
 const fetch = require('node-fetch');
 const formData = require('form-data');
+
+/*
+** Retrieve an arbitrary cookie value by a given key.
+*/
+const getCookieValueFromKey = function(key, cookies) {
+        const cookie = cookies.find(c => c.indexOf(key) !== -1);
+        if (!cookie) {
+            throw new Error('No key found.');
+        }
+        return (RegExp(key + '=(.*?);', 'g').exec(cookie))[1];
+    };
+
+/*
+** Calculate the value of the X-Instagram-GIS header by md5 hashing together the rhx_gis variable and the query variables for the request.
+*/
+const generateRequestSignature = function(rhxGis, queryVariables) {
+    return crypto.createHash('md5').update(`${rhxGis}:${queryVariables}`, 'utf8').digest("hex");
+};
 
 module.exports = class Instagram {
   /**
@@ -16,7 +35,7 @@ module.exports = class Instagram {
     this.csrfToken = csrfToken
     this.sessionId = sessionId
     this.mid = null
-    this.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36'
+    this.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_1) AppleWebKit/604.3.5 (KHTML, like Gecko) Version/11.0.1 Safari/604.3.5'
     this.userIdFollowers = {};
     this.timeoutForCounter = 300
     this.timeoutForCounterValue = 30000
@@ -35,6 +54,13 @@ module.exports = class Instagram {
       ig_cb       : undefined,
       //urlgen      : undefined //this needs to be filled in according to my RE
     };
+
+    // Make an initial request to get the rhx_gis string
+    const initResponse = await superagent.get('https://www.instagram.com/');
+    this.rhxGis = (RegExp('"rhx_gis":"([a-f0-9]{32})"', 'g')).exec(initResponse.text)[1];
+    console.log(`Generated the rhxGis: ${this.rhxGis}`);
+    this.csrfTokenCookie = getCookieValueFromKey('csrftoken', initResponse.header['set-cookie']);
+    console.log(`Generated the token cookie: ${JSON.stringify(this.csrfTokenCookie, null, 2)}`);
   }
 
   /**
@@ -202,8 +228,8 @@ module.exports = class Instagram {
   }
 
   /**
-    * Get csrf token
-    * @return {Object} Promise
+  * Get csrf token
+  * @return {Object} Promise
   */
   getCsrfToken() {
     return fetch('https://www.instagram.com',
@@ -261,83 +287,81 @@ module.exports = class Instagram {
       )
   }
 
-  /**
-    * Session id by usrname and password
-    * @param {String} username
-    * @param {String} password
-    * @return {Object} Promise
+ /**
+  * Session id by usrname and password
+  * @param {String} username
+  * @param {String} password
+  * @return {Object} Promise
   */
- auth(username, password) {
-  var formdata = 'username=' + username + '&password=' + password;
-  // formdata += '&queryParams=%7B%7D';
-  formdata += '&csrfmiddlewaretoken=' + this.csrfToken;
+  auth(username, password) {
+    var formdata = 'username=' + username + '&password=' + password;
+    // formdata += '&queryParams=%7B%7D';
+    formdata += '&csrfmiddlewaretoken=' + this.csrfToken;
 
-  var options = {
-    method  : 'POST',
-    body    : formdata,
-    headers :
-    {
-      'accept'                        : 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-      'scheme'                        : 'https',
-      'cache-control'                 : 'max-age=0',
-      'connection'                    : 'keep-alive',
-      'accept-encoding'               : 'gzip, deflate, br',
-      'accept-language'               : 'en-US,en;q=0.9,es-US;q=0.8,es;q=0.7,ko-KR;q=0.6,ko;q=0.5,zh-HK;q=0.4,zh-CN;q=0.3,zh;q=0.2',
-      'content-length'                : formdata.length,
-      'content-type'                  : 'application/x-www-form-urlencoded',
-      // 'cookie'                        : `rur=ATN; mid=${this.mid}; csrftoken=${this.csrfToken}; mcd=${this.mcd}`,
-      'dnt'                           : 1,
-      'cookie'                        : 'ig_cb=' + this.essentialValues.ig_cb,
-      'origin'                        : 'https://www.instagram.com',
-      'referer'                       : 'https://www.instagram.com/accounts/login',
-      'upgrade-insecure-requests'     : 1,
-      'user-agent'                    : this.userAgent,
-      'x-csrftoken'                   : this.csrfToken,
-      'x-instagram-ajax'              : this.rollout_hash,
-      'x-requested-with'              : 'XMLHttpRequest',
-
+    var options = {
+      method  : 'POST',
+      body    : formdata,
+      headers : {
+        'accept'                        : 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'scheme'                        : 'https',
+        'cache-control'                 : 'max-age=0',
+        'connection'                    : 'keep-alive',
+        'accept-encoding'               : 'gzip, deflate, br',
+        'accept-language'               : 'en-US,en;q=0.9,es-US;q=0.8,es;q=0.7,ko-KR;q=0.6,ko;q=0.5,zh-HK;q=0.4,zh-CN;q=0.3,zh;q=0.2',
+        'content-length'                : formdata.length,
+        'content-type'                  : 'application/x-www-form-urlencoded',
+        // 'cookie'                        : `rur=ATN; mid=${this.mid}; csrftoken=${this.csrfToken}; mcd=${this.mcd}`,
+        'dnt'                           : 1,
+        'cookie'                        : 'ig_cb=' + this.essentialValues.ig_cb,
+        'origin'                        : 'https://www.instagram.com',
+        'referer'                       : 'https://www.instagram.com/accounts/login',
+        'upgrade-insecure-requests'     : 1,
+        'user-agent'                    : this.userAgent,
+        'x-csrftoken'                   : this.csrfToken,
+        'x-instagram-ajax'              : this.rollout_hash,
+        'x-requested-with'              : 'XMLHttpRequest',
+      }
     }
-  }
 
-  return fetch('https://www.instagram.com/accounts/login/ajax', options)
-    .then((t) => {
-      let cookies = t.headers._headers['set-cookie'];
-      console.log(JSON.stringify(cookies, null, 2));
-      var keys = Object.keys(this.essentialValues)
+    return fetch('https://www.instagram.com/accounts/login/ajax', options)
+      .then((t) => {
+        let cookies = t.headers._headers['set-cookie'];
+        console.log(JSON.stringify(cookies, null, 2));
+        var keys = Object.keys(this.essentialValues)
 
-      console.log('Found the following keys.');
-      console.log(JSON.stringify(keys, null, 2));
-      for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        if (!this.essentialValues[key]) {
-          for (let c in cookies) {
-            console.log(JSON.stringify(cookies[c], null, 2));
-            if (cookies[c].includes(key) && !cookies[c].includes(key + '=""')) {
-            var cookieValue = cookies[c].split(';')[0].replace(key + '=', '')
-            this.essentialValues[key] = cookieValue
-            break;
+        console.log('Found the following keys.');
+        console.log(JSON.stringify(keys, null, 2));
+        for (var i = 0; i < keys.length; i++) {
+          var key = keys[i];
+          if (!this.essentialValues[key]) {
+            for (let c in cookies) {
+              console.log(JSON.stringify(cookies[c], null, 2));
+              if (cookies[c].includes(key) && !cookies[c].includes(key + '=""')) {
+              var cookieValue = cookies[c].split(';')[0].replace(key + '=', '')
+              this.essentialValues[key] = cookieValue
+              break;
+              }
             }
           }
         }
-      }
-      console.log(`Found session id: ${this.essentialsValues.sessionId}`);
-      return this.essentialsValues.sessionId;
-    })
-    .catch((err) => {
-      console.log(err);
-      console.log('Instagram authentication failed (challenge required error).');
-    });
-}
+        console.log(`Found session id: ${this.essentialsValues.sessionId}`);
+        return this.essentialsValues.sessionId;
+      })
+      .catch((err) => {
+        console.log(err);
+        console.log('Instagram authentication failed (challenge required error).');
+      });
+  }
 
   /**
-      * Registration for instagram, returning true or false
-      * true if account was successfully created
-      * @param {String} username
-      * @param {String} password
-      * @param {String} name
-      * @param {String} email
-      * @return {Boolen} account_created
-      */
+  * Registration for instagram, returning true or false
+  * true if account was successfully created
+  * @param {String} username
+  * @param {String} password
+  * @param {String} name
+  * @param {String} email
+  * @return {Boolen} account_created
+  */
   reg(username, password, name, email) {
     let form = new formData();
     form.append('username', username)
@@ -359,12 +383,12 @@ module.exports = class Instagram {
         cookie: 'csrftoken=' + this.csrfToken
       }
     })
-      .then(res => res.json())
-      .then(json => {
-        //console.log(json.errors);
-        return json.account_created;
-      })
-      .catch(() => console.log('Instagram registration failed'))
+    .then(res => res.json())
+    .then(json => {
+      //console.log(json.errors);
+      return json.account_created;
+    })
+    .catch(() => console.log('Instagram registration failed'))
   }
 
 
@@ -446,15 +470,27 @@ module.exports = class Instagram {
     * @param {Int} items (default - 10)
     * @return {Object} Promise
   */
-  getFeed(items, cursor) {
+  getFeed(id, items) {
     items = items ? items : 10;
-    return fetch('https://www.instagram.com/graphql/query/?query_id=17866917712078875&fetch_media_item_count=' + items + '&fetch_media_item_cursor=' + cursor + '&fetch_comment_count=4&fetch_like=10',
-      {
-        headers: this.getHeaders(),
-      }).then(t =>
-        // console.log(t)
-        t.json().then(r => r)
-      )
+
+    const queryVariables = JSON.stringify({
+        id: id || "123456789",
+        first: items
+    });
+
+    const signature = generateRequestSignature(this.rhxGis, this.csrfTokenCookie, queryVariables);
+
+    const res = await superagent.get('https://www.instagram.com/graphql/query/')
+        .query({
+            query_hash: '42323d64886122307be10013ad2dcc44',
+            variables: queryVariables
+        })
+        .set({
+            'User-Agent': this.userAgent,
+            'X-Instagram-GIS': signature,
+            'Cookie': `rur=FRC;csrftoken=${this.csrfTokenCookie};ig_pr=1`
+        }));
+    return res;
   }
 
   /**
