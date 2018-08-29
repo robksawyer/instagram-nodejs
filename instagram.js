@@ -5,6 +5,7 @@
 
 "use-strict";
 
+const crypto = require('crypto');
 const superagent = require('superagent');
 const fetch = require('node-fetch');
 const formData = require('form-data');
