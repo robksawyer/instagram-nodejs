@@ -279,7 +279,7 @@ module.exports = class Instagram {
       'accept-language'   : 'en-US,en;q=0.5',
       'content-length'    : formdata.length,
       'content-type'      : 'application/x-www-form-urlencoded',
-      'cookie'            : 'ig_cb=' + this.essentialValues.ig_cb,
+      'cookie'            : 'ig_cb=' + username + '.txt',
       'origin'            : 'https://www.instagram.com',
       'referer'           : 'https://www.instagram.com/',
       'user-agent'        : this.userAgent,
