@@ -272,9 +272,11 @@ module.exports = class Instagram {
     body    : formdata,
     headers :
     {
-      'accept'            : '*/*',
-      'accept-encoding'   : 'gzip, deflate, br',
-      'accept-language'   : 'sv,en-US;q=0.9,en;q=0.8,es;q=0.7',
+      'accept'            : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'cache-control'     : 'max-age=0',
+      'connection'        : 'keep-alive',
+      'accept-encoding'   : 'deflate, br',
+      'accept-language'   : 'en-US,en;q=0.5',
       'content-length'    : formdata.length,
       'content-type'      : 'application/x-www-form-urlencoded',
       'cookie'            : 'ig_cb=' + this.essentialValues.ig_cb,
@@ -288,29 +290,34 @@ module.exports = class Instagram {
     }
   }
 
-  return fetch('https://www.instagram.com/accounts/login/', options).then(
-  t => {
+  return fetch('https://www.instagram.com/accounts/login/?force_classic_login', options)
+    .then((t) => {
       let cookies = t.headers._headers['set-cookie']
 
       var keys = Object.keys(this.essentialValues)
 
-      for (var i = 0; i < keys.length; i++){
+      console.log('Found the following keys.');
+      console.log(JSON.stringify(keys, null, 2));
+      for (var i = 0; i < keys.length; i++) {
         var key = keys[i];
-        if (!this.essentialValues[key])
+        if (!this.essentialValues[key]) {
           for (let c in cookies) {
-            if (cookies[c].includes(key) && !cookies[c].includes(key + '=""')){
-              var cookieValue = cookies[c].split(';')[0].replace(key + '=', '')
-              this.essentialValues[key] = cookieValue
-              break;
+            console.log(JSON.stringify(cookies[c], null, 2));
+            if (cookies[c].includes(key) && !cookies[c].includes(key + '=""')) {
+            var cookieValue = cookies[c].split(';')[0].replace(key + '=', '')
+            this.essentialValues[key] = cookieValue
+            break;
             }
           }
+        }
       }
-
+      console.log(`Found session id: ${this.essentialsValues.sessionId}`);
       return this.essentialsValues.sessionId;
-    }).catch((err) => {
+    })
+    .catch((err) => {
       console.log(err);
       console.log('Instagram authentication failed (challenge required error).');
-    })
+    });
 }
 
   /**
